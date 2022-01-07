@@ -1,0 +1,31 @@
+<div style="background-color:rgb(255,255,255);border:1px solid rgb(0,0,0);padding:15px;">
+	<p style="color:rgb(85,85,85);font-size:14px;text-align:center;">
+		<b><span style="background-color:transparent;color:#000000;font-size:11pt;vertical-align:baseline;"><span style="border:none;"><img alt="W7T8Bgy.png" class="ipsImage" data-ratio="100.00" height="200" src="https://i.imgur.com/W7T8Bgy.png" width="200"></span></span></b>
+	</p>
+
+	<p style="color:rgb(85,85,85);font-size:14px;text-align:center;">
+		<u><span style="font-size:22px;"><b><span style="background-color:transparent;color:#000000;vertical-align:baseline;"><span style="border:none;">SAN ANDREAS BAR ASSOCIATION</span></span></b></span></u>
+	</p>
+
+	<p style="color:inherit;font-size:1.4rem;text-align:center;">
+		<font color="#000000"><span style="font-size:22px;"><b><u>BAR&nbsp;REGISTRY</u></b></span></font>
+	</p>
+
+	<hr style="color:rgb(85,85,85);font-size:14px;">
+	<p style="color:rgb(85,85,85);font-size:14px;text-align:center;">
+		<span style="font-size:20px;"><u><strong>Introduction</strong></u></span>
+	</p>
+
+	<p style="color:rgb(85,85,85);font-size:14px;">
+		This is a list of all members of the San Andreas State Bar Association, after having successfully completed the State Bar Examination. Listed below will be their phone numbers, business address, and any other contact information available to the public. This list is regularly updated. In the event you are listed as a licensed attorney and any of the information below changes, please inform the State Bar Association.&nbsp;Unregistered attorneys and those who have been disbarred are not on the registry&nbsp;as they are not allowed to practice law in San Andreas.&nbsp;<a href="https://jsa.gta.world/viewforum.php?f=310" rel="external nofollow">Admission to the registry can be done by going through the process available here.</a>
+	</p>
+
+	<hr style="color:rgb(85,85,85);font-size:14px;">
+	<p style="text-align:center;">
+		<span style="color:rgb(85,85,85);font-size:20px;"><u><strong>LICENSED&nbsp;</strong></u></span><span style="font-size:20px;"><b><u>PRACTITIONERS</u></b></span>
+	</p>
+
+	<p style="color:inherit;font-size:1.4rem;">
+		&nbsp;
+	</p>
+
