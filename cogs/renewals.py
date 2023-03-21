@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from database_managers.LawyerManager import LawyerManager
 from web_handlers.MainForumRegistryEditor import MainForumRegistryEditor
-from config import guild_id, main_forum_name, main_forum_pass
+from config import GUILD_ID, MAIN_FORUM_NAME, MAIN_FORUM_PASS
 from datetime import datetime
 
 
@@ -14,7 +14,7 @@ class Renewals(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        guild = self.client.get_guild(guild_id)
+        guild = self.client.get_guild(GUILD_ID)
         channel = await guild.fetch_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         # Simply checks if a reaction on a case has been sent. The emoji needs to be the same and the open-cases
@@ -37,7 +37,7 @@ class Renewals(commands.Cog):
     @tasks.loop(hours=24)
     async def renewal_loop(self):
         # Gets the guild, category, log channel, needed roles and instantiates the lawyer manger
-        guild = self.client.get_guild(guild_id)
+        guild = self.client.get_guild(GUILD_ID)
         category = discord.utils.get(guild.categories, name="BAR RENEWALS")
         log_channel = self.client.get_channel_on_guild('bot-logs')
         lm = LawyerManager()
@@ -58,7 +58,7 @@ class Renewals(commands.Cog):
                 member = guild.get_member(lawyer['user_id'])
                 await member.remove_roles(bar_attorney_role)
                 await member.remove_roles(expired_role)
-                reg_editor = MainForumRegistryEditor(main_forum_name, main_forum_pass)
+                reg_editor = MainForumRegistryEditor(MAIN_FORUM_NAME, MAIN_FORUM_PASS)
                 await reg_editor.update_forum_post()
 
         # After looping through the channels, it pulls all of the expired lawyers and checks if they already have a

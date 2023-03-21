@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 from datetime import datetime
 from discord.errors import Forbidden
 from database_managers.ReminderManager import ReminderManager
-from config import guild_id
+from config import GUILD_ID
 
 
 class Reminders(commands.Cog):

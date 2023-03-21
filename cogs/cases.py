@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands, tasks
 from database_managers.CaseManager import CaseManager
 from web_handlers.MainForumScraper import MainForumScraper
-from config import main_forum_name, main_forum_pass
+from config import MAIN_FORUM_NAME, MAIN_FORUM_PASS
 from Views.TakeCase import TakeCase
 from Views.ReloadCases import ReloadCases
 
@@ -31,7 +31,7 @@ class Cases(commands.Cog):
         case_manager = CaseManager()
 
         # Scrapes the forum in each of the three sections and the upload them to the database
-        main_forum_scraper = MainForumScraper(main_forum_name, main_forum_pass)
+        main_forum_scraper = MainForumScraper(MAIN_FORUM_NAME, MAIN_FORUM_PASS)
         await main_forum_scraper.get_cases('criminal')
         await bot_channel.send("Received criminal cases...")
         await main_forum_scraper.get_cases('civil')

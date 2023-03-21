@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from database_managers.LawyerManager import LawyerManager
 from web_handlers.MainForumRegistryEditor import MainForumRegistryEditor
-from config import main_forum_name, main_forum_pass
+from config import MAIN_FORUM_NAME, MAIN_FORUM_PASS
 import re
 from datetime import datetime
 
@@ -95,7 +95,7 @@ class Lawyers(commands.Cog):
         if str(ctx.channel) != "bot-commands":
             return 1
         await ctx.send("Updating lawyer registry...")
-        reg_editor = MainForumRegistryEditor(main_forum_name, main_forum_pass)
+        reg_editor = MainForumRegistryEditor(MAIN_FORUM_NAME, MAIN_FORUM_PASS)
         await reg_editor.update_forum_post()
         await ctx.send("Registry updated!")
 

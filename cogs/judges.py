@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.commands import slash_command
 from database_managers.JudgeManager import JudgeManager
 from database_managers.CaseManager import CaseManager
-from config import guild_id
+from config import GUILD_ID
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ class Judges(commands.Cog):
         self.client = client
         print('Judges module loaded.')
 
-    @slash_command(guild_ids=[guild_id])
+    @slash_command(guild_ids=[GUILD_ID])
     async def judges(self, ctx):
         jm = JudgeManager()
         judge_list = await jm.get_all_judges()
@@ -32,7 +32,7 @@ class Judges(commands.Cog):
             await jm.remove_all_judges()
             judges_to_insert = list()
             # Gets the guild based on the guild ID
-            guild = self.client.get_guild(guild_id)
+            guild = self.client.get_guild(GUILD_ID)
             for role in guild.roles:
                 if role.name == "Judge" or role.name == "Magistrate":
                     for judge in role.members:

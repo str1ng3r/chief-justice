@@ -1,9 +1,11 @@
 import os
 from abc import ABC
+
 import discord
 from discord import Option
 from discord.ext import commands
-from config import bot_token, disabled_cogs, guild_id
+
+from config import BOT_TOKEN, DISABLED_COGS, GUILD_ID
 
 intents = discord.Intents.all()
 
@@ -35,7 +37,7 @@ class Bot(commands.Bot, ABC):
         print("Bot is up.")
         cog_list = self.get_cog_list()
         for cog in cog_list:
-            if cog not in disabled_cogs:
+            if cog not in DISABLED_COGS:
                 self.load_extension(f'cogs.{cog}')
 
 
@@ -46,25 +48,25 @@ def main():
 
     # COMMANDS
 
-    @client.slash_command(guild_ids=[guild_id], description='Loads a module.')
+    @client.slash_command(guild_ids=[GUILD_ID], description='Loads a module.')
     @commands.has_permissions(administrator=True)
     async def load(ctx, extension: Option(str, 'Select module', choices=cog_list)):
         client.load_extension(f'cogs.{extension}')
         await ctx.respond(f'{str(extension).capitalize()} loaded!')
 
-    @client.slash_command(guild_ids=[guild_id], description='Unloads a module.')
+    @client.slash_command(guild_ids=[GUILD_ID], description='Unloads a module.')
     @commands.has_permissions(administrator=True)
     async def unload(ctx, extension: Option(str, 'Select module', choices=cog_list)):
         client.unload_extension(f'cogs.{extension}')
         await ctx.respond(f'{str(extension).capitalize()} unloaded!')
 
-    @client.slash_command(guild_ids=[guild_id], description='Reloads a module.')
+    @client.slash_command(guild_ids=[GUILD_ID], description='Reloads a module.')
     @commands.has_permissions(administrator=True)
     async def reload(ctx, extension: Option(str, 'Select module', choices=cog_list)):
         client.reload_extension(f'cogs.{extension}')
         await ctx.respond(f'{str(extension).capitalize()} reloaded!')
 
-    @client.slash_command(guild_ids=[guild_id], description='Displays all modules. Bold modules are currently loaded.')
+    @client.slash_command(guild_ids=[GUILD_ID], description='Displays all modules. Bold modules are currently loaded.')
     @commands.has_permissions(administrator=True)
     async def modules(ctx):
         enabled_modules = [x[5:] for x in client.extensions]
@@ -82,7 +84,7 @@ def main():
         if isinstance(error, commands.CommandNotFound):
             await ctx.send('Command not found.')
 
-    client.run(bot_token)
+    client.run(BOT_TOKEN)
 
 
 if __name__ == '__main__':
