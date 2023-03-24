@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from database_managers.DatabaseManagerBase import DatabaseManagerBase
 
 
@@ -41,3 +43,9 @@ class JudgeManager(DatabaseManagerBase):
 
     async def get_all_judges(self):
         return self.collection.find({})
+
+    async def __aenter__(self) -> JudgeManager:
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()

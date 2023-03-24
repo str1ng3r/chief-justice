@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from database_managers.DatabaseManagerBase import DatabaseManagerBase
 from datetime import datetime
 
@@ -20,7 +22,6 @@ class CaseManager(DatabaseManagerBase):
         return results
 
     async def make_unavailable(self, name, user):
-        print('here')
         current_time = datetime.now()
         await self.collection.update_one({'name': name}, {
             '$set':
@@ -56,7 +57,7 @@ class CaseManager(DatabaseManagerBase):
                     'archived': 0,
                 },
                 '$set': {
-                    'case_type': values[1]
+                    'case_type': values[1].value
                 }
             }, upsert=True)
 
@@ -78,3 +79,10 @@ class CaseManager(DatabaseManagerBase):
             if count == 0:
                 return None
             return self.collection.find({"year": year, "month": month, "justice": 1, 'handler': judge_id})
+
+    async def __aenter__(self) -> CaseManager:
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+

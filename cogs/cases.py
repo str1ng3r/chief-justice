@@ -1,6 +1,9 @@
+import asyncio
+
 import discord
 from discord.ext import commands, tasks
 from database_managers.CaseManager import CaseManager
+from utils.enums import CaseType
 from web_handlers.MainForumScraper import MainForumScraper
 from config import MAIN_FORUM_NAME, MAIN_FORUM_PASS
 from Views.TakeCase import TakeCase
@@ -31,25 +34,23 @@ class Cases(commands.Cog):
         case_manager = CaseManager()
 
         # Scrapes the forum in each of the three sections and the upload them to the database
-        main_forum_scraper = MainForumScraper(MAIN_FORUM_NAME, MAIN_FORUM_PASS)
-        await main_forum_scraper.get_cases('criminal')
-        await bot_channel.send("Received criminal cases...")
-        await main_forum_scraper.get_cases('civil')
-        await bot_channel.send("Received civil cases...")
-        await main_forum_scraper.get_cases('traffic')
-        await bot_channel.send("Received traffic cases...")
+        main_forum_scraper = MainForumScraper()
+
+        await main_forum_scraper.get_cases()
+        await bot_channel.send("Received cases...")
 
         # Grabs all the available cases from the database
         cases = await case_manager.get_available_cases()
+
         async for case in cases:
-            if case['case_type'] == 'traffic':
+            if case['case_type'] == CaseType.TRAFFIC.value:
                 clr = 0x2e2eff
-            elif case['case_type'] == 'civil':
+            elif case['case_type'] == CaseType.CIVIL.value:
                 clr = 0x00d100
             else:
                 clr = 0xd10000
             emb = discord.Embed(title=case['name'], description=f"[ACCESS]({case['url']})", colour=clr)
-            view = TakeCase(case_manager)
+            view = TakeCase()
             await bot_channel.send('⠀', embed=emb, view=view)
         view = ReloadCases(self)
         await case_manager.close()

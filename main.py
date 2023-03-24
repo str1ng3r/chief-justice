@@ -4,10 +4,12 @@ from abc import ABC
 import discord
 from discord import Option
 from discord.ext import commands
+from mongoengine import connect
 
-from config import BOT_TOKEN, DISABLED_COGS, GUILD_ID
+from config import BOT_TOKEN, DISABLED_COGS, GUILD_ID, DB_CONN_STRING, DATABASE
 
 intents = discord.Intents.all()
+connect(DB_CONN_STRING, db=DATABASE)
 
 
 class Bot(commands.Bot, ABC):
@@ -35,14 +37,14 @@ class Bot(commands.Bot, ABC):
 
     async def on_ready(self):
         print("Bot is up.")
-        cog_list = self.get_cog_list()
-        for cog in cog_list:
-            if cog not in DISABLED_COGS:
-                self.load_extension(f'cogs.{cog}')
 
 
 def main():
     client = Bot()
+    cog_list = client.get_cog_list()
+    for cog in cog_list:
+        if cog not in DISABLED_COGS:
+            client.load_extension(f'cogs.{cog}')
 
     cog_list = client.get_cog_list()
 
@@ -78,6 +80,7 @@ def main():
                 module_list.append(module.capitalize())
         final_response = ', '.join(module_list)
         await ctx.respond(final_response)
+
 
     @client.event
     async def on_command_error(ctx, error):

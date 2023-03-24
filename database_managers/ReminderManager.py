@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from database_managers.DatabaseManagerBase import DatabaseManagerBase
 
 
@@ -24,5 +26,8 @@ class ReminderManager(DatabaseManagerBase):
             '_id': reminder_id
         })
 
-    async def close(self):
-        self.client.close()
+    async def __aenter__(self) -> ReminderManager:
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()

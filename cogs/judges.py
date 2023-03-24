@@ -1,9 +1,8 @@
 import discord
 from discord.ext import commands
-from discord.commands import slash_command
-from database_managers.JudgeManager import JudgeManager
+from io import BytesIO
 from database_managers.CaseManager import CaseManager
-from config import GUILD_ID
+from config import GUILD_ID, JUDGE_ROLE
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -15,99 +14,76 @@ class Judges(commands.Cog):
         self.client = client
         print('Judges module loaded.')
 
-    @slash_command(guild_ids=[GUILD_ID])
+    @discord.slash_command(guild_ids=[GUILD_ID])
     async def judges(self, ctx):
-        jm = JudgeManager()
-        judge_list = await jm.get_all_judges()
+        guild = self.client.get_guild(GUILD_ID)
+
+        judge_list = list()
+        for role in guild.roles:
+            if role.name == JUDGE_ROLE:
+                judge_list.extend(role.members)
         emb = discord.Embed(title="Judges", colour=0x2ecc71)
-        async for judge in judge_list:
-            emb.add_field(name=f"{judge['name']}", value=f"{judge['position']}", inline=True)
-        await jm.close()
-        await ctx.send(embed=emb)
+        for judge in judge_list:
+            emb.add_field(name=f"​", value=f'<@{judge.id}>', inline=True)
+        await ctx.respond(embed=emb)
 
-    @commands.command()
-    async def update_judges(self, ctx):
-        if str(ctx.channel) == "bot-commands":
-            jm = JudgeManager()
-            await jm.remove_all_judges()
-            judges_to_insert = list()
-            # Gets the guild based on the guild ID
-            guild = self.client.get_guild(GUILD_ID)
-            for role in guild.roles:
-                if role.name == "Judge" or role.name == "Magistrate":
-                    for judge in role.members:
-                        judge_data = dict()
-                        judge_data['name'] = f"{judge.name}#{judge.discriminator}"
-                        judge_data['position'] = role.name
-                        judge_data['user_id'] = judge.id
-                        judges_to_insert.append(judge_data)
-            await jm.add_multiple_judges(judges_to_insert)
-            await jm.close()
-            await ctx.send("Judge list updated!")
-
-    @commands.command()
+    @discord.slash_command(guild_ids=[GUILD_ID])
     async def activity(self, ctx, month: int, year: int):
-        if str(ctx.channel) == "bot-commands":
-            # Updates the list of judges
-            await ctx.invoke(self.client.get_command("update_judges"))
-            # Grabs a list of cases
-            cm = CaseManager()
-            cases = await cm.get_cases_year_month(year, month)
-            if cases is None:
-                await ctx.send("No data found for the specified month and year.")
-                return 1
-            data = dict()
+        if str(ctx.channel) != "bot-commands":
+            await ctx.respond("Invalid channel.", ephemeral=True)
+            return
+        await ctx.defer()
+        data = dict()
 
-            # Grabs a list of judges and them adds it to the data dictionary with 0 assigned cases by default.
-            jm = JudgeManager()
-            judge_list = await jm.get_all_judges()
-            await jm.close()
-            async for judge in judge_list:
-                data[judge['user_id']] = 0
+        guild = self.client.get_guild(GUILD_ID)
+        # Grabs a list of judges and them adds it to the data dictionary with 0 assigned cases by default.
+        judge_list = discord.utils.get(guild.roles, name=JUDGE_ROLE).members
+        for judge in judge_list:
+            data[judge.id] = 0
+
+        # Grabs a list of cases
+        async with CaseManager() as cm:
+            cases = await cm.get_cases_year_month(year, month)
+
+            if cases is None:
+                await ctx.send_followup("No data found for the specified month and year.")
+                return
+
             # Loops through the cases and if it finds the handler of one in the data dictionary, it adds 1 to it.
             async for case in cases:
                 if case['handler'] in data.keys():
                     data[case['handler']] = data[case['handler']] + 1
 
-            rows = list()
-            # Loops through the data dictionary and formats it in rows for pandas.
-            for key, value in data.items():
-                # Quickly translates the id to an user object.
-                user = await self.client.fetch_user(key)
-                rows.append({'Name': user.name, 'Cases': value})
+        rows = list()
+        # Loops through the data dictionary and formats it in rows for pandas.
+        for key, value in data.items():
+            # Quickly translates the id to a user object.
+            user = await self.client.fetch_user(key)
+            rows.append({'Name': user.name, 'Cases': value})
 
-            # Creates a dataframe and sorts it descending.
-            df = pd.DataFrame(rows)
-            df = df.sort_values(by=['Cases'], ascending=False)
-            # Resets the indexes on the dataframe
-            df = df.reset_index(drop=True)
-            print(df)
-            # Create a bar plot based on the dataframe data and saves it as plot.png
-            sns.set_style("darkgrid")
-            sns.barplot(data=df, x="Cases", y='Name')
-            plt.savefig("plots/plot.png")
-            plt.clf()
-            plt.close()
-            # Sends an image of the plot
-            await ctx.send(file=discord.File('plots/plot.png'))
-            os.remove('plots/plot.png')
-            print("Sent plot.")
-            await ctx.send(f"Total cases for the month: {df['Cases'].sum()}")
-            # Gets the index of the row with the max cases and them shows the name.
-            await ctx.send(f"Judge with most cases: {df.iloc[df['Cases'].idxmax()]['Name']}")
-            await ctx.send(f"Judge with the least cases: {df.iloc[df['Cases'].idxmin()]['Name']}")
-            await ctx.send(f"Average cases per judge: {df['Cases'].mean()}")
-            await cm.close()
+        # Creates a dataframe and sorts it descending.
+        df = pd.DataFrame(rows)
+        df = df.sort_values(by=['Cases'], ascending=False)
+        # Resets the indexes on the dataframe
+        df = df.reset_index(drop=True)
+        # Create a bar plot based on the dataframe data and saves it as plot.png
+        sns.set_style("darkgrid")
+        plot = sns.barplot(data=df, x="Cases", y='Name')
+        plot_image = BytesIO()
+        plot.get_figure().savefig(plot_image, format='png')
+        # Seeking at the beginning of the in memory file
+        plot_image.seek(0)
+        plt.clf()
+        plt.close()
+        # Sends an image of the plot
+        msg = f"Total cases for the month: {df['Cases'].sum()}\n" \
+              f"Judge with most cases: {df.iloc[df['Cases'].idxmax()]['Name']}\n" \
+              f"Judge with the least cases: {df.iloc[df['Cases'].idxmin()]['Name']}\n" \
+              f"Average cases per judge: {df['Cases'].mean()}"
+        await ctx.send_followup(msg, file=discord.File(plot_image, filename='activity.png'))
 
-    @activity.error
-    async def activity_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("Correct usage: .activity [month as number] [year]")
-
-    @commands.command()
+    @discord.slash_command()
     async def cases(self, ctx, judge: discord.User, month: int, year: int):
-        if str(ctx.channel) != "bot-commands":
-            return 1
         await ctx.send(f'Pulling cases for {judge.name} on {month}/{year}')
         cm = CaseManager()
         cases = await cm.get_cases_year_month(year, month, judge.id)
