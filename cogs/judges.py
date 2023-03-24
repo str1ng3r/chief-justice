@@ -1,15 +1,18 @@
+from io import BytesIO
+
 import discord
 from discord.ext import commands
-from io import BytesIO
-from database_managers.CaseManager import CaseManager
-from config import GUILD_ID, JUDGE_ROLE
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
+
+from config import GUILD_ID, JUDGE_ROLE
+from utils.models import Case
+from utils.utils import Utils
 
 
 class Judges(commands.Cog):
+
     def __init__(self, client):
         self.client = client
         print('Judges module loaded.')
@@ -28,9 +31,8 @@ class Judges(commands.Cog):
         await ctx.respond(embed=emb)
 
     @discord.slash_command(guild_ids=[GUILD_ID])
-    async def activity(self, ctx, month: int, year: int):
-        if str(ctx.channel) != "bot-commands":
-            await ctx.respond("Invalid channel.", ephemeral=True)
+    async def activity(self, ctx, month: discord.Option(int, choices=Utils.MONTH_CHOICES), year: int):
+        if not await Utils.is_in_channel(ctx):
             return
         await ctx.defer()
         data = dict()
@@ -42,17 +44,16 @@ class Judges(commands.Cog):
             data[judge.id] = 0
 
         # Grabs a list of cases
-        async with CaseManager() as cm:
-            cases = await cm.get_cases_year_month(year, month)
+        cases = Case.objects(year=year, month=month)
 
-            if cases is None:
-                await ctx.send_followup("No data found for the specified month and year.")
-                return
+        if not cases:
+            await ctx.send_followup("No data found for the specified month and year.")
+            return
 
             # Loops through the cases and if it finds the handler of one in the data dictionary, it adds 1 to it.
-            async for case in cases:
-                if case['handler'] in data.keys():
-                    data[case['handler']] = data[case['handler']] + 1
+        for case in cases:
+            if case.handler in data.keys():
+                data[case.handler] += 1
 
         rows = list()
         # Loops through the data dictionary and formats it in rows for pandas.
@@ -82,47 +83,54 @@ class Judges(commands.Cog):
               f"Average cases per judge: {df['Cases'].mean()}"
         await ctx.send_followup(msg, file=discord.File(plot_image, filename='activity.png'))
 
-    @discord.slash_command()
-    async def cases(self, ctx, judge: discord.User, month: int, year: int):
-        await ctx.send(f'Pulling cases for {judge.name} on {month}/{year}')
-        cm = CaseManager()
-        cases = await cm.get_cases_year_month(year, month, judge.id)
-        await cm.close()
-        if cases is None:
-            await ctx.send(f"No data found for {judge.name} on {month}/{year}")
-            return 1
+    @discord.slash_command(guild_ids=[GUILD_ID])
+    async def cases(self, ctx, judge: discord.User, month: discord.Option(int, choices=Utils.MONTH_CHOICES), year: int):
+        await ctx.defer()
+        cases = Case.objects(year=year, month=month, handler=judge.id)
+
+        if not cases:
+            await ctx.send_followup(f"No data found for {judge.name} on {month}/{year}")
+            return
         case_list = list()
-        async for case in cases:
-            case_list.append(case['url'])
-        await ctx.send('\n'.join(case_list))
+        for case in cases:
+            case_list.append(case.url)
+        await ctx.send_followup('\n'.join(case_list))
 
-    @cases.error
-    async def cases_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("Correct usage: .cases [user @], [month as number] [year]")
-
-    @commands.command()
+    @discord.slash_command(guild_ids=[GUILD_ID])
     async def make_available(self, ctx, url: str):
-        if str(ctx.channel) != "bot-commands":
-            return 1
-        cm = CaseManager()
-        result = await cm.make_available(url)
-        if result.matched_count == 0:
-            await ctx.send("Case not found.")
-            return 1
-        await ctx.send("Case has been made available and will be visible upon refresh.")
+        if not await Utils.is_in_channel(ctx):
+            return
 
-    @commands.command()
+        await ctx.defer()
+
+        case = Case.objects(url=url).first()
+
+        if case is None:
+            await ctx.send_followup("Case not found.")
+            return
+
+        case.modify(set__justice=False, unset__handler=True)
+        await ctx.send_followup("Case has been made available and will be visible upon refresh.")
+
+    @discord.slash_command(guild_ids=[GUILD_ID])
     async def switch_case(self, ctx, url, to: discord.User):
-        if str(ctx.channel) != "bot-commands":
-            return 1
-        cm = CaseManager()
-        case = await cm.get_case_by_kv('url', url)
-        if 'handler' not in case.keys():
-            await ctx.send("Case is not taken by anyone.")
-            return 1
-        await cm.make_unavailable(case['name'], to.id)
-        await ctx.send(f"Case has been given to {to.name}")
+        if not await Utils.is_in_channel(ctx):
+            return
+
+        await ctx.defer()
+        case = Case.objects(url=url).first()
+
+        if case is None:
+            await ctx.send_followup("Case not found.")
+            return
+
+        if case.handler is None:
+            await ctx.send_followup("This case is not taken by anyone.")
+            return
+
+        case.handler = to.id
+        case.save()
+        await ctx.send_followup(f"Case has been given to {to.name}")
 
 
 def setup(client):

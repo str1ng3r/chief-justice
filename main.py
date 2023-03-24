@@ -9,7 +9,7 @@ from mongoengine import connect
 from config import BOT_TOKEN, DISABLED_COGS, GUILD_ID, DB_CONN_STRING, DATABASE
 
 intents = discord.Intents.all()
-connect(DB_CONN_STRING, db=DATABASE)
+connect(host=DB_CONN_STRING, db=DATABASE)
 
 
 class Bot(commands.Bot, ABC):

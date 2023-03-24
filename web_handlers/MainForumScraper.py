@@ -5,7 +5,6 @@ import aiohttp
 
 from utils.enums import CaseType
 from utils.models import Case
-from database_managers.CaseManager import CaseManager
 from config import RSS_KEY, RSS_MEMBER
 
 
@@ -23,7 +22,6 @@ class MainForumScraper:
 
     async def get_cases(self) -> None:
         tasks = dict()
-        cases = dict()
 
         async with aiohttp.ClientSession() as session:
             async with asyncio.TaskGroup() as tg:
@@ -33,8 +31,8 @@ class MainForumScraper:
             for case_type, response in tasks.items():
                 feed = feedparser.parse(await response.result().text())
                 for case in feed.entries:
-                    Case(name=case['title'], url=case['link'], case_type=case_type).save()
-                    cases[case['title']] = [case['link'], case_type]
-
-        async with CaseManager() as cm:
-            await cm.add_case(cases)
+                    Case.objects(url=case['link']).modify(upsert=True,
+                                                          set_on_insert__name=case['title'],
+                                                          set_on_insert__case_type=case_type,
+                                                          set_on_insert__archived=False,
+                                                          set_on_insert__justice=False)

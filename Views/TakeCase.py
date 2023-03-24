@@ -1,6 +1,8 @@
+from datetime import datetime
+
 import discord
 
-from database_managers.CaseManager import CaseManager
+from utils.models import Case
 
 
 class TakeCase(discord.ui.View):
@@ -9,7 +11,13 @@ class TakeCase(discord.ui.View):
 
     @discord.ui.button(label='Take case', style=discord.ButtonStyle.green)
     async def take(self, button: discord.ui.Button, interaction: discord.Interaction):
-        async with CaseManager() as cm:
-            await cm.make_unavailable(interaction.message.embeds[0].title, interaction.user.id)
-        self.stop()
+        today = datetime.now()
+        case = Case.objects(name=interaction.message.embeds[0].title).first()
+        if case is None:
+            return
+        case.justice = True
+        case.handler = interaction.user.id
+        case.month = today.month
+        case.year = today.year
+        case.save()
         await interaction.message.delete()

@@ -13,7 +13,7 @@ class Misc(commands.Cog):
     async def bonk(self, ctx):
         await ctx.respond("https://cdn.discordapp.com/attachments/792468749496221716/817309301236432917/unknown.png")
 
-    @commands.command()
+    @discord.slash_command()
     async def fbiraid(self, ctx):
         await ctx.respond("https://media1.tenor.com/images/93d11bc59526ce49f60766f0045d819b/tenor.gif?itemid=11500735")
 
