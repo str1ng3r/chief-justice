@@ -1,10 +1,10 @@
 from io import BytesIO
+from statistics import median
 
 import discord
 from discord.ext import commands
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+from aiohttp import ClientSession
+from calendar import month_name
 
 from config import GUILD_ID, JUDGE_ROLE
 from utils.models import Case
@@ -12,6 +12,7 @@ from utils.utils import Utils
 
 
 class Judges(commands.Cog):
+    CHART_URL = "https://quickchart.io/chart/render/zm-2abd0eb9-04b5-423c-8586-bf8f55fd6d8c"
 
     def __init__(self, client):
         self.client = client
@@ -32,6 +33,13 @@ class Judges(commands.Cog):
 
     @discord.slash_command(guild_ids=[GUILD_ID])
     async def activity(self, ctx, month: discord.Option(int, choices=Utils.MONTH_CHOICES), year: int):
+        """
+        Checks the activity of all the judges for a specific month.
+        :param ctx: Discord application context
+        :param month: Month to get the activity for
+        :param year: Year to get the activity for
+        :return: None
+        """
         if not await Utils.is_in_channel(ctx):
             return
         await ctx.defer()
@@ -40,6 +48,7 @@ class Judges(commands.Cog):
         guild = self.client.get_guild(GUILD_ID)
         # Grabs a list of judges and them adds it to the data dictionary with 0 assigned cases by default.
         judge_list = discord.utils.get(guild.roles, name=JUDGE_ROLE).members
+        # Forced to use the judge ID here because cases have the handler stored as the id.
         for judge in judge_list:
             data[judge.id] = 0
 
@@ -50,38 +59,26 @@ class Judges(commands.Cog):
             await ctx.send_followup("No data found for the specified month and year.")
             return
 
-            # Loops through the cases and if it finds the handler of one in the data dictionary, it adds 1 to it.
+        # Loops through the cases and if it finds the handler of one in the data dictionary, it adds 1 to it.
         for case in cases:
             if case.handler in data.keys():
                 data[case.handler] += 1
 
-        rows = list()
-        # Loops through the data dictionary and formats it in rows for pandas.
-        for key, value in data.items():
-            # Quickly translates the id to a user object.
-            user = await self.client.fetch_user(key)
-            rows.append({'Name': user.name, 'Cases': value})
+        # Converting the keys of the dictionary from discord user id to discord name
+        data = {(await guild.fetch_member(key)).display_name: value for (key, value) in data.items()}
 
-        # Creates a dataframe and sorts it descending.
-        df = pd.DataFrame(rows)
-        df = df.sort_values(by=['Cases'], ascending=False)
-        # Resets the indexes on the dataframe
-        df = df.reset_index(drop=True)
-        # Create a bar plot based on the dataframe data and saves it as plot.png
-        sns.set_style("darkgrid")
-        plot = sns.barplot(data=df, x="Cases", y='Name')
-        plot_image = BytesIO()
-        plot.get_figure().savefig(plot_image, format='png')
-        # Seeking at the beginning of the in memory file
-        plot_image.seek(0)
-        plt.clf()
-        plt.close()
-        # Sends an image of the plot
-        msg = f"Total cases for the month: {df['Cases'].sum()}\n" \
-              f"Judge with most cases: {df.iloc[df['Cases'].idxmax()]['Name']}\n" \
-              f"Judge with the least cases: {df.iloc[df['Cases'].idxmin()]['Name']}\n" \
-              f"Average cases per judge: {df['Cases'].mean()}"
-        await ctx.send_followup(msg, file=discord.File(plot_image, filename='activity.png'))
+        case_count = [str(x) for x in data.values()]
+
+        async with ClientSession() as session:
+            results = await session.get(f"{self.CHART_URL}?title=Judicial activity for {month_name[month]} {year}"
+                                        f"&labels={','.join(data.keys())}&data1={','.join(case_count)}")
+            chart_image = BytesIO(await results.content.read())
+
+        msg = f"Total cases for the month: {sum(data.values())}\n" \
+              f"Judge with most cases: {max(data, key=data.get)}\n" \
+              f"Judge with the least cases: {min(data, key=data.get)}\n" \
+              f"Median of cases per judge: {median(data.values())}"
+        await ctx.send_followup(msg, file=discord.File(chart_image, filename='activity.png'))
 
     @discord.slash_command(guild_ids=[GUILD_ID])
     async def cases(self, ctx, judge: discord.User, month: discord.Option(int, choices=Utils.MONTH_CHOICES), year: int):
@@ -91,10 +88,43 @@ class Judges(commands.Cog):
         if not cases:
             await ctx.send_followup(f"No data found for {judge.name} on {month}/{year}")
             return
-        case_list = list()
+
+        embed_chunks = list()
+        case_chunks = list()
+        temp_case_chunk = str()
+        embed_chunk_size = 0
         for case in cases:
-            case_list.append(case.url)
-        await ctx.send_followup('\n'.join(case_list))
+
+            case_chunk_to_add = f"\n[{case.name}]({case.url})"
+            potential_case_chunk_length = len(temp_case_chunk) + len(case_chunk_to_add)
+
+            if potential_case_chunk_length + embed_chunk_size >= 5800:
+                embed_chunks.append(case_chunks)
+                case_chunks = list()
+                embed_chunk_size = 0
+
+            if potential_case_chunk_length > 1000:
+                case_chunks.append(temp_case_chunk)
+                embed_chunk_size += len(temp_case_chunk)
+                temp_case_chunk = ''
+            temp_case_chunk = f"{temp_case_chunk}{case_chunk_to_add}"
+
+        if embed_chunk_size > 0:
+            embed_chunks.append(case_chunks)
+
+        for idx, embed_chunk in enumerate(embed_chunks):
+            match idx:
+                case 0:
+                    title = f"Cases for Judge {judge.display_name}"
+                case _:
+                    title = f"Cases for Judge {judge.display_name} ({idx+1})"
+
+            emb = discord.Embed(title=title, colour=0x00FFFF)
+
+            for case_chunk in embed_chunk:
+                emb.add_field(name=f"​", value=f"{case_chunk}", inline=False)
+
+            await ctx.send_followup(embed=emb)
 
     @discord.slash_command(guild_ids=[GUILD_ID])
     async def make_available(self, ctx, url: str):

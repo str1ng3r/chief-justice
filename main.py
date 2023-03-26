@@ -15,12 +15,11 @@ connect(host=DB_CONN_STRING, db=DATABASE)
 class Bot(commands.Bot, ABC):
     def __init__(self):
         super().__init__(command_prefix=commands.when_mentioned_or('.'), intents=intents)
-        self.guild = None
+        self.ready_lock = False
 
     def get_channel_on_guild(self, channel_name):
-        channel_guild = discord.utils.get(self.get_all_channels(), name=channel_name).guild
         channel_id = discord.utils.get(self.get_all_channels(), name=channel_name).id
-        return channel_guild.get_channel(channel_id)
+        return self.get_channel(channel_id)
 
     @staticmethod
     def get_cog_list():
@@ -36,14 +35,27 @@ class Bot(commands.Bot, ABC):
         return cog_list
 
     async def on_ready(self):
-        print("Bot is up.")
+        """
+        PyCord's on_ready event. This event may be called multiple times, but for the purposes of this bot, that
+        would cause issues, so a ready_lock variable is used. Once ready_lock is set to True, all code in on_ready
+        is skipped.
+        :return:
+        """
+        if not self.ready_lock:
+            print("Bot is up.")
+            if 'cases' not in DISABLED_COGS:
+                self.load_extension('cogs.cases')
+        self.ready_lock = True
 
 
 def main():
     client = Bot()
     cog_list = client.get_cog_list()
+
+    # Cases cannot be loaded here because it causes an error with the open-cases channel not being found, as it loads
+    # the cog before the bot is ready.
     for cog in cog_list:
-        if cog not in DISABLED_COGS:
+        if cog not in DISABLED_COGS and cog != 'cases':
             client.load_extension(f'cogs.{cog}')
 
     cog_list = client.get_cog_list()
@@ -80,7 +92,6 @@ def main():
                 module_list.append(module.capitalize())
         final_response = ', '.join(module_list)
         await ctx.respond(final_response)
-
 
     @client.event
     async def on_command_error(ctx, error):

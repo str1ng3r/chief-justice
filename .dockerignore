@@ -1,0 +1,8 @@
+.env
+.gitignore
+Dockerfile
+.dockerignore
+venv/
+
+# Ignore generated files
+**/*.pyc

@@ -18,4 +18,4 @@ ADMIN_COMMANDS_CHANNEL = os.getenv('ADMIN_COMMANDS_CHANNEL')
 
 GUILD_ID = int(os.getenv('GUILD_ID'))
 
-DISABLED_COGS = ['cases', 'renewals']
+DISABLED_COGS = []
