@@ -109,7 +109,10 @@ class Judges(commands.Cog):
                 temp_case_chunk = ''
             temp_case_chunk = f"{temp_case_chunk}{case_chunk_to_add}"
 
-        if embed_chunk_size > 0:
+        if not case_chunks:
+            case_chunks.append(temp_case_chunk)
+
+        if embed_chunk_size >= 0:
             embed_chunks.append(case_chunks)
 
         for idx, embed_chunk in enumerate(embed_chunks):
