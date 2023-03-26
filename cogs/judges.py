@@ -86,7 +86,7 @@ class Judges(commands.Cog):
         cases = Case.objects(year=year, month=month, handler=judge.id)
 
         if not cases:
-            await ctx.send_followup(f"No data found for {judge.name} on {month}/{year}")
+            await ctx.send_followup(f"No data found for {judge.display_name} on {month}/{year}")
             return
 
         embed_chunks = list()
