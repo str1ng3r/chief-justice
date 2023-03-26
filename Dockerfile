@@ -4,10 +4,9 @@ ENV POETRY_VERSION="1.4.1"
 
 COPY pyproject.toml poetry.lock ./
 
-RUN pip install "poetry==$POETRY_VERSION" & python -m venv /venv
+RUN python3 -m venv /venv & pip install "poetry==$POETRY_VERSION"
 
-RUN poetry export -f requirements.txt | /venv/bin/pip install -r /dev/stdin
-
+RUN poetry export -f requirements.txt | /venv/bin/pip install --no-cache-dir -r /dev/stdin
 
 FROM python:3.11.2-slim-buster as runner-image
 
