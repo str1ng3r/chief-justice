@@ -14,7 +14,7 @@ connect(host=DB_CONN_STRING, db=DATABASE)
 
 class Bot(commands.Bot, ABC):
     def __init__(self):
-        super().__init__(command_prefix=commands.when_mentioned_or('.'), intents=intents)
+        super().__init__(intents=intents)
         self.ready_lock = False
 
     def get_channel_on_guild(self, channel_name):
